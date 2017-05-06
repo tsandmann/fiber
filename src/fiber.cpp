@@ -28,7 +28,7 @@ fiber::start_() noexcept {
     case launch::post:
         // push new fiber to ready-queue
         // resume executing current fiber
-        ctx->get_scheduler()->set_ready( impl_.get() );
+        ctx->get_scheduler()->schedule( impl_.get() );
         break;
     case launch::dispatch:
         // resume new fiber and push current fiber
@@ -44,14 +44,13 @@ void
 fiber::join() {
     // FIXME: must fiber::join() be synchronized?
     if ( context::active()->get_id() == get_id() ) {
-        throw fiber_error( std::make_error_code( std::errc::resource_deadlock_would_occur),
-                                    "boost fiber: trying to join itself");
+        throw fiber_error{ std::make_error_code( std::errc::resource_deadlock_would_occur),
+                           "boost fiber: trying to join itself" };
     }
     if ( ! joinable() ) {
-        throw fiber_error( std::make_error_code( std::errc::invalid_argument),
-                                    "boost fiber: fiber not joinable");
+        throw fiber_error{ std::make_error_code( std::errc::invalid_argument),
+                           "boost fiber: fiber not joinable" };
     }
-
     impl_->join();
     impl_.reset();
 }
@@ -59,8 +58,8 @@ fiber::join() {
 void
 fiber::detach() {
     if ( ! joinable() ) {
-        throw fiber_error( std::make_error_code( std::errc::invalid_argument),
-                                    "boost fiber: fiber not joinable");
+        throw fiber_error{ std::make_error_code( std::errc::invalid_argument),
+                           "boost fiber: fiber not joinable" };
     }
     impl_.reset();
 }

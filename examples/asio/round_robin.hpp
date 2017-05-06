@@ -35,13 +35,11 @@ namespace asio {
 
 class round_robin : public algo::algorithm {
 private:
-    typedef scheduler::ready_queue_t rqueue_t;
-
 //[asio_rr_suspend_timer
     std::shared_ptr< boost::asio::io_service >      io_svc_;
     boost::asio::steady_timer                       suspend_timer_;
 //]
-    boost::fibers::scheduler::ready_queue_t         rqueue_{};
+    boost::fibers::scheduler::ready_queue_type      rqueue_{};
     boost::fibers::mutex                            mtx_{};
     boost::fibers::condition_variable               cnd_{};
     std::size_t                                     counter_{ 0 };
@@ -177,6 +175,9 @@ public:
         // a new expiration time. This will cause us to spin the loop twice --
         // once for the operation_aborted handler, once for timer expiration
         // -- but that shouldn't be a big problem.
+        suspend_timer_.async_wait([](boost::system::error_code const&){
+                                    this_fiber::yield();
+                                  });
         suspend_timer_.expires_at( std::chrono::steady_clock::now() );
     }
 //]

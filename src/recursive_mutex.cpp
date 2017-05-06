@@ -23,7 +23,7 @@ void
 recursive_mutex::lock() {
     context * ctx = context::active();
     // store this fiber in order to be notified later
-    detail::spinlock_lock lk( wait_queue_splk_);
+    detail::spinlock_lock lk{ wait_queue_splk_ };
     if ( ctx == owner_) {
         ++count_;
         return;
@@ -42,7 +42,7 @@ recursive_mutex::lock() {
 bool
 recursive_mutex::try_lock() noexcept { 
     context * ctx = context::active();
-    detail::spinlock_lock lk( wait_queue_splk_);
+    detail::spinlock_lock lk{ wait_queue_splk_ };
     if ( nullptr == owner_) {
         owner_ = ctx;
         count_ = 1;
@@ -70,7 +70,7 @@ recursive_mutex::unlock() {
             wait_queue_.pop_front();
             owner_ = ctx;
             count_ = 1;
-            context::active()->set_ready( ctx);
+            context::active()->schedule( ctx);
         } else {
             owner_ = nullptr;
             return;
