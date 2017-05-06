@@ -4,6 +4,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+// based on https://github.com/atemerev/skynet from Alexander Temerev 
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -40,12 +42,17 @@ void skynet( allocator_type & salloc, channel_type & c, std::size_t num, std::si
         c.push( num);
     } else {
         channel_type rc{ 16 };
+        std::vector< boost::fibers::fiber > fibers;
         for ( std::size_t i = 0; i < div; ++i) {
             auto sub_num = num + i * size / div;
-            boost::fibers::fiber{ boost::fibers::launch::dispatch,
+            fibers.push_back(
+                boost::fibers::fiber{ boost::fibers::launch::dispatch,
                                   std::allocator_arg, salloc,
                                   skynet,
-                                  std::ref( salloc), std::ref( rc), sub_num, size / div, div }.detach();
+                                  std::ref( salloc), std::ref( rc), sub_num, size / div, div });
+        }
+        for ( auto & f: fibers) {
+            f.join();
         }
         std::uint64_t sum{ 0 };
         for ( std::size_t i = 0; i < div; ++i) {
@@ -70,14 +77,13 @@ int main() {
         unsigned int n = std::thread::hardware_concurrency();
         barrier b( n);
         bind_to_processor( n - 1);
-        std::size_t stack_size{ 4048 };
-        std::size_t size{ 100000 };
+        std::size_t size{ 1000000 };
         std::size_t div{ 10 };
         std::vector< std::thread > threads;
         for ( unsigned int i = 1; i < n; ++i) {
             threads.push_back( std::thread( thread, i - 1, & b) );
         };
-        allocator_type salloc{ stack_size };
+        allocator_type salloc{ allocator_type::traits_type::page_size() };
         std::uint64_t result{ 0 };
         duration_type duration{ duration_type::zero() };
         channel_type rc{ 2 };
